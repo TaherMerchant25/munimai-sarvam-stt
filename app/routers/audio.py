@@ -4,12 +4,25 @@ from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 
 from app.config import Settings, get_settings
 from models.schemas import AudioProcessResponse
+from services.elevenlabs_stt_client import get_elevenlabs_stt_client
 from services.nlu_pipeline import get_nlu_pipeline
 from services.gemini_stt_client import get_gemini_stt_client
 from services.sarvam_stt_client import get_sarvam_client
 
 
 router = APIRouter()
+
+
+def _stt_client_and_language(
+    settings: Settings,
+    language: Optional[str],
+):
+    provider = settings.stt_provider.lower()
+    if provider == "sarvam":
+        return get_sarvam_client(settings), language or settings.sarvam_language
+    if provider == "elevenlabs":
+        return get_elevenlabs_stt_client(settings), language
+    return get_gemini_stt_client(settings), language
 
 
 @router.post("/process", response_model=AudioProcessResponse)
@@ -19,14 +32,7 @@ async def process_audio(
     source: Optional[str] = None,
     settings: Settings = Depends(get_settings),
 ):
-    # Choose STT backend
-    provider = settings.stt_provider.lower()
-    if provider == "sarvam":
-        stt_client = get_sarvam_client(settings)
-        use_language = language or settings.sarvam_language
-    else:  # default to Gemini
-        stt_client = get_gemini_stt_client(settings)
-        use_language = language
+    stt_client, use_language = _stt_client_and_language(settings, language)
 
     nlu = get_nlu_pipeline(settings)
 
@@ -38,7 +44,7 @@ async def process_audio(
             language=use_language,
         )
     except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=502, detail=f"Sarvam STT failed: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"STT failed: {exc}") from exc
 
     nlu_result = nlu.process_transcript(transcript_result.text)
 
@@ -62,13 +68,7 @@ async def transcript_only(
     source: Optional[str] = None,
     settings: Settings = Depends(get_settings),
 ):
-    provider = settings.stt_provider.lower()
-    if provider == "sarvam":
-        stt_client = get_sarvam_client(settings)
-        use_language = language or settings.sarvam_language
-    else:
-        stt_client = get_gemini_stt_client(settings)
-        use_language = language
+    stt_client, use_language = _stt_client_and_language(settings, language)
 
     try:
         audio_bytes = await file.read()
@@ -78,7 +78,7 @@ async def transcript_only(
             language=use_language,
         )
     except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=502, detail=f"Sarvam STT failed: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"STT failed: {exc}") from exc
 
     # No NLU here
     return AudioProcessResponse(

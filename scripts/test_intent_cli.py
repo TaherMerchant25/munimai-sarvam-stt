@@ -1,15 +1,27 @@
 import argparse
 from pathlib import Path
+from typing import Optional
 
 import soundfile as sf  # type: ignore[import]
 
 from app.config import get_settings
+from services.elevenlabs_stt_client import get_elevenlabs_stt_client
+from services.gemini_stt_client import get_gemini_stt_client
 from services.nlu_pipeline import get_nlu_pipeline
 from services.sarvam_stt_client import get_sarvam_client
 
 
+def _stt_client_and_language(settings, language: Optional[str]):
+    provider = settings.stt_provider.lower()
+    if provider == "sarvam":
+        return get_sarvam_client(settings), language or settings.sarvam_language
+    if provider == "elevenlabs":
+        return get_elevenlabs_stt_client(settings), language
+    return get_gemini_stt_client(settings), language
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Test Sarvam STT + Intent classifier pipeline.")
+    parser = argparse.ArgumentParser(description="Test STT + Intent classifier pipeline.")
     parser.add_argument("--audio", type=Path, required=True, help="Path to audio file")
     parser.add_argument(
         "--transcript-only",
@@ -19,7 +31,7 @@ def main() -> None:
     args = parser.parse_args()
 
     settings = get_settings()
-    sarvam = get_sarvam_client(settings)
+    stt_client, use_language = _stt_client_and_language(settings, None)
 
     data, samplerate = sf.read(args.audio)
     # Re-encode to bytes via soundfile
@@ -32,10 +44,10 @@ def main() -> None:
     import asyncio
 
     async def run() -> None:
-        result = await sarvam.transcribe_bytes(
+        result = await stt_client.transcribe_bytes(
             audio_bytes=audio_bytes,
             filename=args.audio.name,
-            language=settings.sarvam_language,
+            language=use_language,
         )
         print(f"Transcript: {result.text}")
         print(f"Language:   {result.language}")

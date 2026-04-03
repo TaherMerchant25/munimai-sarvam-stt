@@ -11,11 +11,25 @@ cd munimai_sarvam_stt
 pip install -r requirements.txt
 ```
 
-2. Create a `.env` file:
+2. Create a `.env` file.
+
+**Using ElevenLabs Speech-to-Text** ([API reference](https://elevenlabs.io/docs/api-reference/speech-to-text/convert)):
+
+```bash
+STT_PROVIDER=elevenlabs
+ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+ELEVENLABS_STT_MODEL=scribe_v2
+INTENT_MODEL_PATH=ml_models/intent_classifier
+USE_ONNX=true
+```
+
+For `/api/audio/process` and `/api/audio/transcript`, optional query parameter `language` is sent to ElevenLabs as `language_code` (ISO-639-1/3). Omit it to let the model auto-detect.
+
+**Using Gemini or Sarvam instead:**
 
 ```bash
 SARVAM_API_KEY=your_sarvam_key_here
-SARVAM_STT_MODEL=whisper-large-v3   # or the Sarvam STT model id you use
+SARVAM_STT_MODEL=whisper-large-v3
 SARVAM_LANGUAGE=hi
 INTENT_MODEL_PATH=ml_models/intent_classifier
 USE_ONNX=true
