@@ -5,8 +5,6 @@ from dataclasses import dataclass
 
 from app.config import Settings
 from models.schemas import NLUResult
-from services.intent_classifier import get_intent_classifier
-
 
 _whitespace_re = re.compile(r"\s+")
 
@@ -23,11 +21,11 @@ class NLUPipeline:
 
     def process_transcript(self, text: str) -> NLUResult:
         normalized = self._normalize(text)
-        classifier = get_intent_classifier(self.settings)
-        result = classifier.predict(normalized)
+        # classifier = get_intent_classifier(self.settings)
+        # result = classifier.predict(normalized)
         # Ensure normalized_text set to our normalized variant
-        result.normalized_text = normalized
-        return result
+        # result.normalized_text = normalized
+        return NLUResult(intent="MOCK_INTENT", confidence=1.0, normalized_text=normalized)
 
 
 _nlu_pipeline: NLUPipeline | None = None

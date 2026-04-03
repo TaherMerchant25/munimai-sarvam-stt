@@ -17,3 +17,10 @@ build/
 .vscode/
 *.log
 ml_models/
+munim_intent_classifier_export/
+venv/
+venv311/
+*.wav
+*.mp3
+*.onnx
+01_intent_classifier_training.txt
